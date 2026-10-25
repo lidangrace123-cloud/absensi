@@ -244,7 +244,12 @@ function renderApp() {
               Tambahkan Absen
             </button>
           `
-              : ''
+              : `
+            <button class="btn btn-primary" id="btnOpenAdminAddModal" title="Tambah Absen / Izin / Sakit (Admin)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              Tambahkan Absen
+            </button>
+          `
           }
 
           ${
@@ -492,6 +497,72 @@ function renderApp() {
               Simpan Password
             </button>
           </div>
+    <!-- Modal Form Tambah Absen Khusus Admin (Tanpa Kamera, Nama, Role, Keterangan Izin/Sakit) -->
+    <div class="modal-backdrop" id="modalAdminAddAttendance">
+      <div class="modal-dialog" style="max-width: 480px;">
+        <div class="modal-header">
+          <h2 class="modal-title">Pencatatan Absensi Karyawan (Admin)</h2>
+          <button class="modal-close-btn" id="btnCloseAdminAddModal">&times;</button>
+        </div>
+        <form id="adminAttendanceForm">
+          <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="background: #eff6ff; border-left: 3px solid #3b82f6; padding: 10px 14px; border-radius: 4px; font-size: 0.82rem; color: #1e40af;">
+              Input manual khusus Admin tanpa kamera foto. Status kehadiran otomatis ditetapkan sesuai keterangan yang Anda pilih (bebas waktu submit).
+            </div>
+
+            <!-- Nama Karyawan -->
+            <div class="form-group">
+              <label class="form-label" for="adminEmpName">Nama Karyawan *</label>
+              <input
+                type="text"
+                id="adminEmpName"
+                class="form-control"
+                placeholder="Masukkan nama lengkap karyawan..."
+                required
+                autocomplete="off"
+              />
+            </div>
+
+            <!-- Role Karyawan -->
+            <div class="form-group">
+              <label class="form-label" for="adminEmpRole">Role Karyawan *</label>
+              <select id="adminEmpRole" class="form-control" required>
+                <option value="${ROLES.KASIR}">${ROLES.KASIR}</option>
+                <option value="${ROLES.BARISTA}">${ROLES.BARISTA}</option>
+                <option value="${ROLES.RACKER}">${ROLES.RACKER}</option>
+              </select>
+            </div>
+
+            <!-- Status Keterangan (Izin / Sakit) -->
+            <div class="form-group">
+              <label class="form-label" for="adminKeteranganType">Status Keterangan *</label>
+              <select id="adminKeteranganType" class="form-control" required>
+                <option value="Izin">Izin</option>
+                <option value="Sakit">Sakit</option>
+                <option value="Hadir">Hadir</option>
+                <option value="Tidak Hadir">Tidak Hadir</option>
+              </select>
+            </div>
+
+            <!-- Catatan Tambahan (Opsional) -->
+            <div class="form-group">
+              <label class="form-label" for="adminNotes">Catatan / Alasan (Opsional)</label>
+              <input
+                type="text"
+                id="adminNotes"
+                class="form-control"
+                placeholder="Misal: Keperluan keluarga, demam berdarah, dll..."
+                autocomplete="off"
+              />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="btnCancelAdminAdd">Batal</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitAdminAttendance">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Simpan Absen
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -682,6 +753,8 @@ function renderDailyPage(container) {
             <option value="all" ${dailyFilter.status === 'all' ? 'selected' : ''}>Semua Status</option>
             <option value="Hadir" ${dailyFilter.status === 'Hadir' ? 'selected' : ''}>Hadir</option>
             <option value="Tidak Hadir" ${dailyFilter.status === 'Tidak Hadir' ? 'selected' : ''}>Tidak Hadir</option>
+            <option value="Izin" ${dailyFilter.status === 'Izin' ? 'selected' : ''}>Izin</option>
+            <option value="Sakit" ${dailyFilter.status === 'Sakit' ? 'selected' : ''}>Sakit</option>
           </select>
         </div>
       </div>
@@ -739,7 +812,11 @@ function renderDailyPage(container) {
                         + Tambahkan Absen Sekarang
                       </button>
                     `
-                        : ''
+                        : `
+                      <button class="btn btn-primary btn-sm" style="margin-top: 14px;" id="btnEmptyAdminAdd">
+                        + Tambahkan Absen Sekarang
+                      </button>
+                    `
                     }
                   </div>
                 </td>
@@ -766,23 +843,41 @@ function renderDailyPage(container) {
                           ? 'badge-role-barista'
                           : 'badge-role-racker';
 
-                      const statusBadgeClass = item.status === 'Hadir' ? 'badge-hadir' : 'badge-tidak-hadir';
-                      const statusIconSvg =
-                        item.status === 'Hadir'
-                          ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`
-                          : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+                      let statusBadgeClass = 'badge-hadir';
+                      let statusIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+                      if (item.status === 'Tidak Hadir') {
+                        statusBadgeClass = 'badge-tidak-hadir';
+                        statusIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+                      } else if (item.status === 'Izin') {
+                        statusBadgeClass = 'badge-izin';
+                        statusIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+                      } else if (item.status === 'Sakit') {
+                        statusBadgeClass = 'badge-sakit';
+                        statusIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`;
+                      }
 
                       return `
                   <tr>
                     <td style="color: var(--text-muted); font-weight: 600;">${index + 1}</td>
                     <td>
-                      <!-- Preview Kecil Foto -->
-                      <div class="photo-thumb-wrapper view-photo-btn" data-id="${item.id}" title="Klik untuk memperbesar preview foto">
-                        <img src="${item.photoData}" class="photo-thumb" alt="${item.name}" loading="lazy" />
-                        <div class="photo-zoom-icon">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      <!-- Preview Kecil Foto / Placeholder Tanpa Foto -->
+                      ${
+                        item.photoData
+                          ? `
+                        <div class="photo-thumb-wrapper view-photo-btn" data-id="${item.id}" title="Klik untuk memperbesar preview foto">
+                          <img src="${item.photoData}" class="photo-thumb" alt="${item.name}" loading="lazy" />
+                          <div class="photo-zoom-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                          </div>
                         </div>
-                      </div>
+                      `
+                          : `
+                        <div class="photo-thumb-wrapper" style="cursor: default; background: #f8fafc; display: flex; align-items: center; justify-content: center; border: 1px dashed #cbd5e1;" title="Tanpa Foto (Input Admin)">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                      `
+                      }
                     </td>
                     <td>
                       <div class="emp-cell">
@@ -793,7 +888,7 @@ function renderDailyPage(container) {
                       <span class="badge ${roleBadgeClass}">${item.role}</span>
                     </td>
                     <td>
-                      <span style="font-weight: 600; color: var(--text-main); font-size: 0.85rem;">${item.shiftName || 'Shift Siang'}</span>
+                      <span style="font-weight: 600; color: var(--text-main); font-size: 0.85rem;">${item.shiftName || '-'}</span>
                     </td>
                     <td>
                       <div style="font-weight: 600; color: var(--text-main); font-size: 0.86rem;">${formattedTime}</div>
@@ -810,9 +905,15 @@ function renderDailyPage(container) {
                     </td>
                     <td style="text-align: right;">
                       <div style="display: flex; justify-content: flex-end; gap: 6px;">
-                        <button class="btn btn-outline btn-sm view-photo-btn" data-id="${item.id}" title="Preview Foto">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        </button>
+                        ${
+                          item.photoData
+                            ? `
+                          <button class="btn btn-outline btn-sm view-photo-btn" data-id="${item.id}" title="Preview Foto">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                          </button>
+                        `
+                            : ''
+                        }
                         ${
                           currentAuthRole === 'admin'
                             ? `
@@ -862,6 +963,8 @@ function renderMonthlyPage(container) {
         role: rec.role,
         hadirCount: 0,
         tidakHadirCount: 0,
+        izinCount: 0,
+        sakitCount: 0,
         latestPhoto: rec.photoData,
         latestDate: rec.timestamp
       });
@@ -870,6 +973,10 @@ function renderMonthlyPage(container) {
     const stat = employeeStatsMap.get(rec.name);
     if (rec.status === 'Hadir') {
       stat.hadirCount += 1;
+    } else if (rec.status === 'Izin') {
+      stat.izinCount = (stat.izinCount || 0) + 1;
+    } else if (rec.status === 'Sakit') {
+      stat.sakitCount = (stat.sakitCount || 0) + 1;
     } else {
       stat.tidakHadirCount += 1;
     }
@@ -1046,7 +1153,7 @@ function renderMonthlyPage(container) {
             `
                 : recapList
                     .map((item, index) => {
-                      const total = item.hadirCount + item.tidakHadirCount;
+                      const total = item.hadirCount + item.tidakHadirCount + (item.izinCount || 0) + (item.sakitCount || 0);
                       const percentage = total > 0 ? Math.round((item.hadirCount / total) * 100) : 0;
 
                       let progressClass = 'progress-green';
@@ -1249,6 +1356,64 @@ function bindCoreEvents() {
     setAdminPassword(newPass);
     closeChangePassModal();
     showToast('Password admin berhasil diubah!', 'success');
+  });
+
+  // Event Listeners Modal Tambah Absen Khusus Admin
+  const modalAdminAddAttendance = document.getElementById('modalAdminAddAttendance');
+  const btnOpenAdminAddModal = document.getElementById('btnOpenAdminAddModal');
+  const btnEmptyAdminAdd = document.getElementById('btnEmptyAdminAdd');
+  const btnCloseAdminAddModal = document.getElementById('btnCloseAdminAddModal');
+  const btnCancelAdminAdd = document.getElementById('btnCancelAdminAdd');
+  const adminAttendanceForm = document.getElementById('adminAttendanceForm');
+
+  const closeAdminAddModal = () => {
+    modalAdminAddAttendance?.classList.remove('open');
+    if (adminAttendanceForm) adminAttendanceForm.reset();
+  };
+
+  const openAdminAddModal = () => {
+    if (adminAttendanceForm) adminAttendanceForm.reset();
+    modalAdminAddAttendance?.classList.add('open');
+    setTimeout(() => {
+      document.getElementById('adminEmpName')?.focus();
+    }, 100);
+  };
+
+  btnOpenAdminAddModal?.addEventListener('click', openAdminAddModal);
+  btnEmptyAdminAdd?.addEventListener('click', openAdminAddModal);
+  btnCloseAdminAddModal?.addEventListener('click', closeAdminAddModal);
+  btnCancelAdminAdd?.addEventListener('click', closeAdminAddModal);
+  modalAdminAddAttendance?.addEventListener('click', e => {
+    if (e.target === modalAdminAddAttendance) closeAdminAddModal();
+  });
+
+  adminAttendanceForm?.addEventListener('submit', e => {
+    e.preventDefault();
+    const name = document.getElementById('adminEmpName')?.value.trim();
+    const role = document.getElementById('adminEmpRole')?.value;
+    const keteranganType = document.getElementById('adminKeteranganType')?.value || 'Izin';
+    const notes = document.getElementById('adminNotes')?.value.trim();
+
+    if (!name) {
+      showToast('Harap masukkan nama karyawan!', 'danger');
+      return;
+    }
+
+    const fullReason = notes ? `${keteranganType} (${notes})` : `Pencatatan ${keteranganType} oleh Admin`;
+
+    addAttendanceRecord({
+      name,
+      role,
+      shiftKey: '-',
+      photoData: null,
+      status: keteranganType,
+      reason: fullReason
+    });
+
+    closeAdminAddModal();
+    currentRecords = getAllRecords();
+    renderCurrentTab();
+    showToast(`Absensi ${name} (${keteranganType}) berhasil disimpan!`, 'success');
   });
 
   bindFormModalLogic();

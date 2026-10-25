@@ -30,22 +30,36 @@ export function getAllRecords() {
 /**
  * Tambah rekaman absensi baru dari form upload/kamera
  */
-export function addAttendanceRecord({ name, role, shiftKey, photoData, customDate }) {
+export function addAttendanceRecord({ name, role, shiftKey, photoData, customDate, status, reason }) {
   const records = getAllRecords();
   const dateObj = customDate ? new Date(customDate) : new Date();
 
-  const evalResult = evaluateAttendance(role, shiftKey, dateObj);
+  let finalStatus, finalReason, finalShiftKey, finalShiftName;
+
+  if (status) {
+    // Input khusus Admin (misal: Izin, Sakit) tanpa aturan jam shift
+    finalStatus = status;
+    finalReason = reason || `Dicatat ${status} oleh Admin`;
+    finalShiftKey = shiftKey || '-';
+    finalShiftName = shiftKey && shiftKey !== '-' ? (shiftKey === 'siang' ? 'Shift Siang' : 'Shift Malam') : '-';
+  } else {
+    const evalResult = evaluateAttendance(role, shiftKey, dateObj);
+    finalStatus = evalResult.status;
+    finalReason = evalResult.reason;
+    finalShiftKey = evalResult.shiftKey;
+    finalShiftName = evalResult.shiftName;
+  }
 
   const newRecord = {
     id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     name: name.trim(),
     role,
-    shiftKey: evalResult.shiftKey,
-    shiftName: evalResult.shiftName,
+    shiftKey: finalShiftKey,
+    shiftName: finalShiftName,
     timestamp: dateObj.toISOString(),
-    photoData,
-    status: evalResult.status,
-    reason: evalResult.reason
+    photoData: photoData || null,
+    status: finalStatus,
+    reason: finalReason
   };
 
   records.unshift(newRecord);
