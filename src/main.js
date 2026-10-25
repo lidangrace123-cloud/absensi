@@ -497,6 +497,10 @@ function renderApp() {
               Simpan Password
             </button>
           </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Modal Form Tambah Absen Khusus Admin (Tanpa Kamera, Nama, Role, Keterangan Izin/Sakit) -->
     <div class="modal-backdrop" id="modalAdminAddAttendance">
       <div class="modal-dialog" style="max-width: 480px;">
