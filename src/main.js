@@ -15,7 +15,7 @@ import {
 } from './storage.js';
 import { startCameraStream, stopCameraStream, captureSnapshot } from './camera.js';
 import logoUrl from './assets/logo.jpg';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 // State Autentikasi ('karyawan' | 'admin' | null)
@@ -1772,10 +1772,11 @@ function bindMonthlyEvents() {
   const btnExportMonthlyPdf = document.getElementById('btnExportMonthlyPdf');
 
   btnExportMonthlyPdf?.addEventListener('click', () => {
-    const monthlyRecords = currentRecords.filter(item => {
-      const d = new Date(item.timestamp);
-      return d.getMonth() === monthlyFilter.month && d.getFullYear() === monthlyFilter.year;
-    });
+    try {
+      const monthlyRecords = currentRecords.filter(item => {
+        const d = new Date(item.timestamp);
+        return d.getMonth() === monthlyFilter.month && d.getFullYear() === monthlyFilter.year;
+      });
 
     const recapMap = new Map();
     monthlyRecords.forEach(r => {
@@ -1909,8 +1910,12 @@ function bindMonthlyEvents() {
       }
     });
 
-    doc.save(`Rekap_Presensi_Balole_${monthName}_${year}.pdf`);
-    showToast('Laporan Rekap PDF berhasil diunduh!', 'success');
+      doc.save(`Rekap_Presensi_Balole_${monthName}_${year}.pdf`);
+      showToast('Laporan Rekap PDF berhasil diunduh!', 'success');
+    } catch (err) {
+      console.error('Error saat membuat PDF:', err);
+      showToast('Gagal membuat file PDF: ' + (err.message || 'Terjadi kesalahan sistem'), 'danger');
+    }
   });
 }
 
