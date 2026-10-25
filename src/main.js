@@ -15,6 +15,8 @@ import {
 } from './storage.js';
 import { startCameraStream, stopCameraStream, captureSnapshot } from './camera.js';
 import logoUrl from './assets/logo.jpg';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // State Autentikasi ('karyawan' | 'admin' | null)
 let currentAuthRole = sessionStorage.getItem('grace_auth_role') || null;
@@ -1127,13 +1129,9 @@ function renderMonthlyPage(container) {
           <span class="box-count">(${recapList.length} Karyawan)</span>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button class="btn btn-outline btn-sm" id="btnPrintRecap">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Cetak / Print Rekap
-          </button>
-          <button class="btn btn-outline btn-sm" id="btnExportMonthlyCsv">
+          <button class="btn btn-primary btn-sm" id="btnExportMonthlyPdf" title="Download Laporan Rekapitulasi PDF">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-            Export CSV
+            Download PDF
           </button>
         </div>
       </div>
@@ -1771,11 +1769,9 @@ function bindMonthlyEvents() {
     renderCurrentTab();
   });
 
-  btnPrintRecap?.addEventListener('click', () => {
-    window.print();
-  });
+  const btnExportMonthlyPdf = document.getElementById('btnExportMonthlyPdf');
 
-  btnExportMonthlyCsv?.addEventListener('click', () => {
+  btnExportMonthlyPdf?.addEventListener('click', () => {
     const monthlyRecords = currentRecords.filter(item => {
       const d = new Date(item.timestamp);
       return d.getMonth() === monthlyFilter.month && d.getFullYear() === monthlyFilter.year;
@@ -1808,18 +1804,113 @@ function bindMonthlyEvents() {
       }
     });
 
-    const csvRows = [
-      ['No', 'Nama Karyawan', 'Role', 'Jumlah Hadir', 'Izin (Khusus)', 'Izin (Pribadi)', 'Sakit', 'Jumlah Tidak Hadir', 'Total Absen', 'Persentase Hadir']
-    ];
+    let list = Array.from(recapMap.values());
+    if (monthlyFilter.role !== 'all') {
+      list = list.filter(r => r.role === monthlyFilter.role);
+    }
+    if (monthlyFilter.search) {
+      const q = monthlyFilter.search.toLowerCase();
+      list = list.filter(r => r.name.toLowerCase().includes(q) || r.role.toLowerCase().includes(q));
+    }
 
-    let idx = 1;
-    recapMap.forEach(row => {
-      const tot = row.hadir + row.izinKhusus + row.izinPribadi + row.sakit + row.tidakHadir;
-      const pct = tot > 0 ? Math.round((row.hadir / tot) * 100) + '%' : '0%';
-      csvRows.push([idx++, row.name, row.role, row.hadir, row.izinKhusus, row.izinPribadi, row.sakit, row.tidakHadir, tot, pct]);
+    if (list.length === 0) {
+      showToast('Tidak ada data rekapitulasi untuk diunduh ke PDF.', 'danger');
+      return;
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
     });
 
-    downloadCsvFile(csvRows, `Rekap_Bulanan_Balole_Biliard_${monthlyFilter.month + 1}_${monthlyFilter.year}.csv`);
+    const monthName = monthNames[monthlyFilter.month];
+    const year = monthlyFilter.year;
+
+    // Header Dokumen PDF
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42); // #0f172a
+    doc.text('BALOLE BILIARD SPORT & CAFE', 14, 18);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    doc.setTextColor(71, 85, 105); // #475569
+    doc.text(`Laporan Rekapitulasi Presensi Karyawan - Periode: ${monthName} ${year}`, 14, 25);
+
+    const printDate = new Date().toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + ' WIB';
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139); // #64748b
+    doc.text(`Dicetak pada: ${printDate} | Filter Role: ${monthlyFilter.role === 'all' ? 'Semua' : monthlyFilter.role}`, 14, 31);
+
+    // Garis Pemisah
+    doc.setDrawColor(203, 213, 225); // #cbd5e1
+    doc.setLineWidth(0.4);
+    doc.line(14, 34, 196, 34);
+
+    // Tabel PDF: Nama, Role, Jumlah Hadir, Izin (Khusus), Izin (Pribadi), dan Sakit
+    const tableBody = list.map((item, idx) => [
+      idx + 1,
+      item.name,
+      item.role,
+      `${item.hadir} Hari`,
+      `${item.izinKhusus} Hari`,
+      `${item.izinPribadi} Hari`,
+      `${item.sakit} Hari`
+    ]);
+
+    autoTable(doc, {
+      startY: 38,
+      head: [['No', 'Nama Karyawan', 'Role', 'Jumlah Hadir', 'Izin (Khusus)', 'Izin (Pribadi)', 'Sakit']],
+      body: tableBody,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [37, 99, 235], // Blue #2563eb
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+        halign: 'center',
+        valign: 'middle'
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 12 },
+        1: { halign: 'left', fontStyle: 'bold' },
+        2: { halign: 'center', cellWidth: 26 },
+        3: { halign: 'center', cellWidth: 28 },
+        4: { halign: 'center', cellWidth: 28 },
+        5: { halign: 'center', cellWidth: 28 },
+        6: { halign: 'center', cellWidth: 24 }
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 4,
+        textColor: [30, 41, 59],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.2
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252] // Slate-50
+      },
+      didDrawPage: (data) => {
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(
+          `Halaman ${data.pageNumber} dari ${pageCount} • Balole Biliard Sport & Cafe`,
+          14,
+          doc.internal.pageSize.height - 10
+        );
+      }
+    });
+
+    doc.save(`Rekap_Presensi_Balole_${monthName}_${year}.pdf`);
+    showToast('Laporan Rekap PDF berhasil diunduh!', 'success');
   });
 }
 
