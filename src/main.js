@@ -1856,7 +1856,7 @@ function bindMonthlyEvents() {
     doc.setLineWidth(0.4);
     doc.line(14, 34, 196, 34);
 
-    // Tabel PDF: Nama, Role, Jumlah Hadir, Izin (Khusus), Izin (Pribadi), dan Sakit
+    // Tabel PDF: Nama, Role, Jumlah Hadir, Izin (Khusus), Izin (Pribadi), Sakit, dan Jumlah Tidak Hadir
     const tableBody = list.map((item, idx) => [
       idx + 1,
       item.name,
@@ -1864,30 +1864,32 @@ function bindMonthlyEvents() {
       `${item.hadir} Hari`,
       `${item.izinKhusus} Hari`,
       `${item.izinPribadi} Hari`,
-      `${item.sakit} Hari`
+      `${item.sakit} Hari`,
+      `${item.tidakHadir} Hari`
     ]);
 
     autoTable(doc, {
       startY: 38,
-      head: [['No', 'Nama Karyawan', 'Role', 'Jumlah Hadir', 'Izin (Khusus)', 'Izin (Pribadi)', 'Sakit']],
+      head: [['No', 'Nama Karyawan', 'Role', 'Jumlah Hadir', 'Izin (Khusus)', 'Izin (Pribadi)', 'Sakit', 'Jumlah Tidak Hadir']],
       body: tableBody,
       theme: 'grid',
       headStyles: {
         fillColor: [37, 99, 235], // Blue #2563eb
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 9,
+        fontSize: 8.5,
         halign: 'center',
         valign: 'middle'
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 12 },
+        0: { halign: 'center', cellWidth: 10 },
         1: { halign: 'left', fontStyle: 'bold' },
-        2: { halign: 'center', cellWidth: 26 },
-        3: { halign: 'center', cellWidth: 28 },
-        4: { halign: 'center', cellWidth: 28 },
-        5: { halign: 'center', cellWidth: 28 },
-        6: { halign: 'center', cellWidth: 24 }
+        2: { halign: 'center', cellWidth: 22 },
+        3: { halign: 'center', cellWidth: 24 },
+        4: { halign: 'center', cellWidth: 24 },
+        5: { halign: 'center', cellWidth: 24 },
+        6: { halign: 'center', cellWidth: 20 },
+        7: { halign: 'center', cellWidth: 28 }
       },
       styles: {
         fontSize: 9,
