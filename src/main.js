@@ -537,14 +537,13 @@ function renderApp() {
               </select>
             </div>
 
-            <!-- Status Keterangan (Izin / Sakit) -->
+            <!-- Status Keterangan (Izin Khusus, Izin Pribadi, Sakit) -->
             <div class="form-group">
               <label class="form-label" for="adminKeteranganType">Status Keterangan *</label>
               <select id="adminKeteranganType" class="form-control" required>
-                <option value="Izin">Izin</option>
+                <option value="Izin (Khusus)">Izin (Khusus)</option>
+                <option value="Izin (Pribadi)">Izin (Pribadi)</option>
                 <option value="Sakit">Sakit</option>
-                <option value="Hadir">Hadir</option>
-                <option value="Tidak Hadir">Tidak Hadir</option>
               </select>
             </div>
 
@@ -757,7 +756,8 @@ function renderDailyPage(container) {
             <option value="all" ${dailyFilter.status === 'all' ? 'selected' : ''}>Semua Status</option>
             <option value="Hadir" ${dailyFilter.status === 'Hadir' ? 'selected' : ''}>Hadir</option>
             <option value="Tidak Hadir" ${dailyFilter.status === 'Tidak Hadir' ? 'selected' : ''}>Tidak Hadir</option>
-            <option value="Izin" ${dailyFilter.status === 'Izin' ? 'selected' : ''}>Izin</option>
+            <option value="Izin (Khusus)" ${dailyFilter.status === 'Izin (Khusus)' ? 'selected' : ''}>Izin (Khusus)</option>
+            <option value="Izin (Pribadi)" ${dailyFilter.status === 'Izin (Pribadi)' ? 'selected' : ''}>Izin (Pribadi)</option>
             <option value="Sakit" ${dailyFilter.status === 'Sakit' ? 'selected' : ''}>Sakit</option>
           </select>
         </div>
@@ -853,7 +853,7 @@ function renderDailyPage(container) {
                       if (item.status === 'Tidak Hadir') {
                         statusBadgeClass = 'badge-tidak-hadir';
                         statusIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-                      } else if (item.status === 'Izin') {
+                      } else if (item.status.includes('Izin')) {
                         statusBadgeClass = 'badge-izin';
                         statusIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
                       } else if (item.status === 'Sakit') {
@@ -1395,7 +1395,7 @@ function bindCoreEvents() {
     e.preventDefault();
     const name = document.getElementById('adminEmpName')?.value.trim();
     const role = document.getElementById('adminEmpRole')?.value;
-    const keteranganType = document.getElementById('adminKeteranganType')?.value || 'Izin';
+    const keteranganType = document.getElementById('adminKeteranganType')?.value || 'Izin (Khusus)';
     const notes = document.getElementById('adminNotes')?.value.trim();
 
     if (!name) {
