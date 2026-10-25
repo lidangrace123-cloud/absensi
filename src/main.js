@@ -966,9 +966,10 @@ function renderMonthlyPage(container) {
         name: rec.name,
         role: rec.role,
         hadirCount: 0,
-        tidakHadirCount: 0,
-        izinCount: 0,
+        izinKhususCount: 0,
+        izinPribadiCount: 0,
         sakitCount: 0,
+        tidakHadirCount: 0,
         latestPhoto: rec.photoData,
         latestDate: rec.timestamp
       });
@@ -977,12 +978,25 @@ function renderMonthlyPage(container) {
     const stat = employeeStatsMap.get(rec.name);
     if (rec.status === 'Hadir') {
       stat.hadirCount += 1;
-    } else if (rec.status === 'Izin') {
-      stat.izinCount = (stat.izinCount || 0) + 1;
+    } else if (rec.status === 'Izin (Khusus)') {
+      stat.izinKhususCount += 1;
+    } else if (rec.status === 'Izin (Pribadi)') {
+      stat.izinPribadiCount += 1;
     } else if (rec.status === 'Sakit') {
-      stat.sakitCount = (stat.sakitCount || 0) + 1;
-    } else {
+      stat.sakitCount += 1;
+    } else if (rec.status === 'Tidak Hadir') {
       stat.tidakHadirCount += 1;
+    } else {
+      // Toleransi status varian izin lama
+      if (rec.status.includes('Khusus')) {
+        stat.izinKhususCount += 1;
+      } else if (rec.status.includes('Pribadi')) {
+        stat.izinPribadiCount += 1;
+      } else if (rec.status.includes('Izin')) {
+        stat.izinKhususCount += 1;
+      } else {
+        stat.tidakHadirCount += 1;
+      }
     }
 
     if (new Date(rec.timestamp) >= new Date(stat.latestDate)) {
@@ -1133,6 +1147,9 @@ function renderMonthlyPage(container) {
               <th>Nama Karyawan</th>
               <th>Role</th>
               <th style="background: #ecfdf5; color: #065f46; font-weight: 700;">Jumlah Hadir</th>
+              <th style="background: #eff6ff; color: #1d4ed8; font-weight: 700;">Izin (Khusus)</th>
+              <th style="background: #f0f9ff; color: #0284c7; font-weight: 700;">Izin (Pribadi)</th>
+              <th style="background: #fffbeb; color: #b45309; font-weight: 700;">Sakit</th>
               <th style="color: #991b1b;">Jumlah Tidak Hadir</th>
               <th>Total Input Absen</th>
               <th style="width: 170px;">Persentase Kehadiran</th>
@@ -1144,7 +1161,7 @@ function renderMonthlyPage(container) {
               recapList.length === 0
                 ? `
               <tr>
-                <td colspan="9">
+                <td colspan="12">
                   <div class="empty-state">
                     <div class="empty-state-icon">
                       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.7"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
@@ -1157,7 +1174,12 @@ function renderMonthlyPage(container) {
             `
                 : recapList
                     .map((item, index) => {
-                      const total = item.hadirCount + item.tidakHadirCount + (item.izinCount || 0) + (item.sakitCount || 0);
+                      const total =
+                        item.hadirCount +
+                        item.izinKhususCount +
+                        item.izinPribadiCount +
+                        item.sakitCount +
+                        item.tidakHadirCount;
                       const percentage = total > 0 ? Math.round((item.hadirCount / total) * 100) : 0;
 
                       let progressClass = 'progress-green';
@@ -1205,6 +1227,24 @@ function renderMonthlyPage(container) {
                         ${item.hadirCount}
                       </span>
                       <span style="font-size: 0.75rem; color: #15803d; font-weight: 600;"> Hari</span>
+                    </td>
+                    <td style="background: #eff6ff;">
+                      <span style="font-size: 1.05rem; font-weight: 700; color: #1d4ed8;">
+                        ${item.izinKhususCount}
+                      </span>
+                      <span style="font-size: 0.75rem; color: #2563eb; font-weight: 600;"> Hari</span>
+                    </td>
+                    <td style="background: #f0f9ff;">
+                      <span style="font-size: 1.05rem; font-weight: 700; color: #0284c7;">
+                        ${item.izinPribadiCount}
+                      </span>
+                      <span style="font-size: 0.75rem; color: #0369a1; font-weight: 600;"> Hari</span>
+                    </td>
+                    <td style="background: #fffbeb;">
+                      <span style="font-size: 1.05rem; font-weight: 700; color: #b45309;">
+                        ${item.sakitCount}
+                      </span>
+                      <span style="font-size: 0.75rem; color: #92400e; font-weight: 600;"> Hari</span>
                     </td>
                     <td>
                       <span style="font-size: 1.05rem; font-weight: 700; color: #dc2626;">
@@ -1744,22 +1784,39 @@ function bindMonthlyEvents() {
     const recapMap = new Map();
     monthlyRecords.forEach(r => {
       if (!recapMap.has(r.name)) {
-        recapMap.set(r.name, { name: r.name, role: r.role, hadir: 0, tidakHadir: 0 });
+        recapMap.set(r.name, {
+          name: r.name,
+          role: r.role,
+          hadir: 0,
+          izinKhusus: 0,
+          izinPribadi: 0,
+          sakit: 0,
+          tidakHadir: 0
+        });
       }
       const item = recapMap.get(r.name);
       if (r.status === 'Hadir') item.hadir += 1;
-      else item.tidakHadir += 1;
+      else if (r.status === 'Izin (Khusus)') item.izinKhusus += 1;
+      else if (r.status === 'Izin (Pribadi)') item.izinPribadi += 1;
+      else if (r.status === 'Sakit') item.sakit += 1;
+      else if (r.status === 'Tidak Hadir') item.tidakHadir += 1;
+      else {
+        if (r.status.includes('Khusus')) item.izinKhusus += 1;
+        else if (r.status.includes('Pribadi')) item.izinPribadi += 1;
+        else if (r.status.includes('Izin')) item.izinKhusus += 1;
+        else item.tidakHadir += 1;
+      }
     });
 
     const csvRows = [
-      ['No', 'Nama Karyawan', 'Role', 'Jumlah Hadir', 'Jumlah Tidak Hadir', 'Total Absen', 'Persentase Hadir']
+      ['No', 'Nama Karyawan', 'Role', 'Jumlah Hadir', 'Izin (Khusus)', 'Izin (Pribadi)', 'Sakit', 'Jumlah Tidak Hadir', 'Total Absen', 'Persentase Hadir']
     ];
 
     let idx = 1;
     recapMap.forEach(row => {
-      const tot = row.hadir + row.tidakHadir;
+      const tot = row.hadir + row.izinKhusus + row.izinPribadi + row.sakit + row.tidakHadir;
       const pct = tot > 0 ? Math.round((row.hadir / tot) * 100) + '%' : '0%';
-      csvRows.push([idx++, row.name, row.role, row.hadir, row.tidakHadir, tot, pct]);
+      csvRows.push([idx++, row.name, row.role, row.hadir, row.izinKhusus, row.izinPribadi, row.sakit, row.tidakHadir, tot, pct]);
     });
 
     downloadCsvFile(csvRows, `Rekap_Bulanan_Balole_Biliard_${monthlyFilter.month + 1}_${monthlyFilter.year}.csv`);
