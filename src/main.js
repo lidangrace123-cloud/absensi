@@ -36,6 +36,10 @@ let dailyFilter = {
 };
 
 // Filter State Bulanan
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
 const now = new Date();
 let monthlyFilter = {
   month: now.getMonth(), // 0-11
@@ -950,10 +954,7 @@ function renderDailyPage(container) {
  * Dengan Icon Minimalis Seragam 1 Warna
  */
 function renderMonthlyPage(container) {
-  const monthNames = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-  ];
+  const monthNames = MONTH_NAMES;
 
   const monthlyRecords = currentRecords.filter(item => {
     const d = new Date(item.timestamp);
@@ -1825,7 +1826,7 @@ function bindMonthlyEvents() {
       format: 'a4'
     });
 
-    const monthName = monthNames[monthlyFilter.month];
+    const monthName = MONTH_NAMES[monthlyFilter.month];
     const year = monthlyFilter.year;
 
     // Header Dokumen PDF
