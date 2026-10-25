@@ -324,11 +324,6 @@ function renderApp() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
               Foto Ulang
             </button>
-            <label class="btn btn-outline btn-sm" style="cursor: pointer;" title="Unggah foto dari perangkat">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-              Upload File
-              <input type="file" id="fallbackFileInput" accept="image/*" style="display: none;" />
-            </label>
           </div>
 
           <form id="attendanceForm">
@@ -1270,7 +1265,6 @@ function bindFormModalLogic() {
 
   const btnSnapPhoto = document.getElementById('btnSnapPhoto');
   const btnRetakePhoto = document.getElementById('btnRetakePhoto');
-  const fallbackFileInput = document.getElementById('fallbackFileInput');
 
   const webcamVideo = document.getElementById('webcamVideo');
   const snapshotPreviewImg = document.getElementById('snapshotPreviewImg');
@@ -1318,7 +1312,7 @@ function bindFormModalLogic() {
   // Tombol Ambil Foto
   btnSnapPhoto?.addEventListener('click', () => {
     if (!webcamVideo || webcamVideo.readyState < 2) {
-      showToast('Kamera belum aktif. Silakan izinkan akses kamera atau gunakan tombol Upload File.', 'danger');
+      showToast('Kamera belum aktif. Silakan izinkan akses kamera pada perangkat.', 'danger');
       return;
     }
 
@@ -1359,56 +1353,6 @@ function bindFormModalLogic() {
     updateFormPreview();
   });
 
-  // Fallback Upload File
-  fallbackFileInput?.addEventListener('change', e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = event => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-
-        const effectiveDate = new Date();
-        const barHeight = Math.max(36, Math.round(img.height * 0.08));
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
-        ctx.fillRect(0, img.height - barHeight, img.width, barHeight);
-        ctx.fillStyle = '#3b82f6';
-        ctx.fillRect(0, img.height - barHeight, img.width, 3);
-
-        const timeStr = effectiveDate.toLocaleDateString('id-ID') + ' • ' + effectiveDate.toLocaleTimeString('id-ID');
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `600 ${Math.max(12, Math.round(barHeight * 0.4))}px sans-serif`;
-        ctx.textAlign = 'right';
-        ctx.fillText(timeStr, img.width - 14, img.height - barHeight / 2 + 2);
-
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-        formState.capturedPhoto = dataUrl;
-        formState.capturedTime = effectiveDate;
-
-        if (snapshotPreviewImg) {
-          snapshotPreviewImg.src = dataUrl;
-          snapshotPreviewImg.style.display = 'block';
-        }
-        if (webcamVideo) webcamVideo.style.display = 'none';
-        if (cameraViewfinder) cameraViewfinder.style.display = 'none';
-        if (cameraLiveBadge) cameraLiveBadge.style.display = 'none';
-
-        if (btnSnapPhoto) btnSnapPhoto.style.display = 'none';
-        if (btnRetakePhoto) btnRetakePhoto.style.display = 'inline-flex';
-
-        showToast('Foto dari file berhasil dimuat!', 'success');
-        updateFormPreview();
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
 
   // Submit Absensi
   btnSubmitAttendance?.addEventListener('click', () => {
