@@ -10,6 +10,7 @@ import {
   getAllRecords,
   addAttendanceRecord,
   deleteAttendanceRecord,
+  updateAttendanceOvertime,
   getAdminPassword,
   setAdminPassword
 } from './storage.js';
@@ -507,6 +508,46 @@ function renderApp() {
       </div>
     </div>
 
+    <!-- Modal Input Jam Lembur Karyawan -->
+    <div class="modal-backdrop" id="modalOvertime">
+      <div class="modal-dialog" style="max-width: 440px;">
+        <div class="modal-header">
+          <h2 class="modal-title">Input Jam Lembur</h2>
+          <button class="modal-close-btn" id="btnCloseOvertime">&times;</button>
+        </div>
+        <form id="formOvertime">
+          <input type="hidden" id="overtimeRecordId" value="" />
+          <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="background: #fffbeb; border: 1px solid #fef3c7; border-left: 3px solid #d97706; padding: 10px 14px; border-radius: 4px; font-size: 0.84rem;">
+              <div style="font-weight: 700; color: #92400e;" id="otEmpName">Nama Karyawan</div>
+              <div style="color: #b45309; font-size: 0.78rem; margin-top: 2px;" id="otMetaInfo">Waktu & Shift</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="inputOvertimeHours">Jumlah Jam Lembur (Jam) *</label>
+              <input
+                type="number"
+                id="inputOvertimeHours"
+                class="form-control"
+                placeholder="Contoh: 1, 2, atau 2.5"
+                min="0"
+                max="24"
+                step="0.5"
+                required
+              />
+              <span class="form-hint">Masukkan durasi jam lembur karyawan (contoh: 1, 2, 2.5 jam).</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="btnCancelOvertime">Batal</button>
+            <button type="submit" class="btn btn-primary" id="btnSaveOvertime">
+              Simpan Jam Lembur
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Modal Form Tambah Absen Khusus Admin (Tanpa Kamera, Nama, Role, Keterangan Izin/Sakit) -->
     <div class="modal-backdrop" id="modalAdminAddAttendance">
       <div class="modal-dialog" style="max-width: 480px;">
@@ -800,7 +841,8 @@ function renderDailyPage(container) {
               <th>Waktu Upload Foto</th>
               <th>Status Absensi</th>
               <th>Keterangan</th>
-              <th style="text-align: right; width: ${currentAuthRole === 'admin' ? '96px' : '56px'};">Aksi</th>
+              <th style="background: #fef3c7; color: #92400e; font-weight: 700;">Jam Lembur</th>
+              <th style="text-align: right; width: ${currentAuthRole === 'admin' ? '132px' : '56px'};">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -808,7 +850,7 @@ function renderDailyPage(container) {
               filtered.length === 0
                 ? `
               <tr>
-                <td colspan="9">
+                <td colspan="10">
                   <div class="empty-state">
                     <div class="empty-state-icon">
                       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -913,6 +955,13 @@ function renderDailyPage(container) {
                     <td>
                       <div class="reason-text">${escapeHtml(item.reason || '-')}</div>
                     </td>
+                    <td>
+                      ${
+                        item.overtime && Number(item.overtime) > 0
+                          ? `<span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700;">+${item.overtime} Jam</span>`
+                          : `<span style="color: var(--text-muted); font-size: 0.85rem;">-</span>`
+                      }
+                    </td>
                     <td style="text-align: right;">
                       <div style="display: flex; justify-content: flex-end; gap: 6px;">
                         ${
@@ -929,6 +978,9 @@ function renderDailyPage(container) {
                             ? `
                           <button class="btn btn-danger-outline btn-sm delete-record-btn" data-id="${item.id}" title="Hapus Data (Khusus Admin)">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                          </button>
+                          <button class="btn btn-outline btn-sm add-overtime-btn" data-id="${item.id}" title="Tambah / Atur Jam Lembur" style="color: #d97706; border-color: #fde68a;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                           </button>
                         `
                             : ''
@@ -973,12 +1025,16 @@ function renderMonthlyPage(container) {
         izinPribadiCount: 0,
         sakitCount: 0,
         tidakHadirCount: 0,
+        totalOvertime: 0,
         latestPhoto: rec.photoData,
         latestDate: rec.timestamp
       });
     }
 
     const stat = employeeStatsMap.get(rec.name);
+    if (rec.overtime && Number(rec.overtime) > 0) {
+      stat.totalOvertime += Number(rec.overtime);
+    }
     if (rec.status === 'Hadir') {
       stat.hadirCount += 1;
     } else if (rec.status === 'Izin (Khusus)') {
@@ -1154,6 +1210,7 @@ function renderMonthlyPage(container) {
               <th style="background: #f0f9ff; color: #0284c7; font-weight: 700;">Izin (Pribadi)</th>
               <th style="background: #fffbeb; color: #b45309; font-weight: 700;">Sakit</th>
               <th style="color: #991b1b;">Jumlah Tidak Hadir</th>
+              <th style="background: #fef3c7; color: #92400e; font-weight: 700;">Total Lembur</th>
               <th>Total Input Absen</th>
               <th style="width: 170px;">Persentase Kehadiran</th>
               <th>Status</th>
@@ -1164,7 +1221,7 @@ function renderMonthlyPage(container) {
               recapList.length === 0
                 ? `
               <tr>
-                <td colspan="12">
+                <td colspan="13">
                   <div class="empty-state">
                     <div class="empty-state-icon">
                       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.7"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
@@ -1255,6 +1312,12 @@ function renderMonthlyPage(container) {
                       </span>
                       <span style="font-size: 0.75rem; color: #b91c1c;"> Hari</span>
                     </td>
+                    <td style="background: #fefce8;">
+                      <span style="font-size: 1.05rem; font-weight: 700; color: #b45309;">
+                        ${item.totalOvertime || 0}
+                      </span>
+                      <span style="font-size: 0.75rem; color: #92400e; font-weight: 600;"> Jam</span>
+                    </td>
                     <td>
                       <span style="font-weight: 600;">${total}</span> Kali
                     </td>
@@ -1338,6 +1401,40 @@ function bindCoreEvents() {
   btnCloseLightboxBtn?.addEventListener('click', closeLightbox);
   modalPhotoLightbox?.addEventListener('click', e => {
     if (e.target === modalPhotoLightbox) closeLightbox();
+  });
+
+  // Event Listeners Modal Input Jam Lembur
+  const modalOvertime = document.getElementById('modalOvertime');
+  const btnCloseOvertime = document.getElementById('btnCloseOvertime');
+  const btnCancelOvertime = document.getElementById('btnCancelOvertime');
+  const formOvertime = document.getElementById('formOvertime');
+
+  const closeOvertimeModal = () => {
+    modalOvertime?.classList.remove('open');
+    if (formOvertime) formOvertime.reset();
+  };
+
+  btnCloseOvertime?.addEventListener('click', closeOvertimeModal);
+  btnCancelOvertime?.addEventListener('click', closeOvertimeModal);
+  modalOvertime?.addEventListener('click', e => {
+    if (e.target === modalOvertime) closeOvertimeModal();
+  });
+
+  formOvertime?.addEventListener('submit', e => {
+    e.preventDefault();
+    const id = document.getElementById('overtimeRecordId')?.value;
+    const hoursVal = document.getElementById('inputOvertimeHours')?.value;
+    const hours = parseFloat(hoursVal);
+
+    if (isNaN(hours) || hours < 0) {
+      showToast('Masukkan jumlah jam lembur yang valid!', 'danger');
+      return;
+    }
+
+    currentRecords = updateAttendanceOvertime(id, hours);
+    closeOvertimeModal();
+    showToast(`Jam lembur (${hours} jam) berhasil disimpan!`, 'success');
+    renderCurrentTab();
   });
 
   // Event Listeners Modal Ganti Password Admin
@@ -1740,6 +1837,14 @@ function bindDailyEvents() {
         }
       });
     });
+
+    document.querySelectorAll('.add-overtime-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const item = currentRecords.find(r => r.id === id);
+        if (item) openOvertimeModal(item);
+      });
+    });
   }
 }
 
@@ -1792,10 +1897,14 @@ function bindMonthlyEvents() {
             izinKhusus: 0,
             izinPribadi: 0,
             sakit: 0,
-            tidakHadir: 0
+            tidakHadir: 0,
+            totalOvertime: 0
           });
         }
         const item = recapMap.get(r.name);
+        if (r.overtime && Number(r.overtime) > 0) {
+          item.totalOvertime += Number(r.overtime);
+        }
         if (r.status === 'Hadir') item.hadir += 1;
         else if (r.status === 'Izin (Khusus)') item.izinKhusus += 1;
         else if (r.status === 'Izin (Pribadi)') item.izinPribadi += 1;
@@ -1824,7 +1933,7 @@ function bindMonthlyEvents() {
       }
 
       const csvRows = [
-        ['No', 'Nama Karyawan', 'Role', 'Jumlah Hadir', 'Izin (Khusus)', 'Izin (Pribadi)', 'Sakit', 'Jumlah Tidak Hadir', 'Total Input Absen', 'Persentase Hadir', 'Status Evaluasi']
+        ['No', 'Nama Karyawan', 'Role', 'Jumlah Hadir', 'Izin (Khusus)', 'Izin (Pribadi)', 'Sakit', 'Jumlah Tidak Hadir', 'Total Lembur', 'Total Input Absen', 'Persentase Hadir', 'Status Evaluasi']
       ];
 
       let idx = 1;
@@ -1832,7 +1941,7 @@ function bindMonthlyEvents() {
         const tot = row.hadir + row.izinKhusus + row.izinPribadi + row.sakit + row.tidakHadir;
         const pct = tot > 0 ? Math.round((row.hadir / tot) * 100) + '%' : '0%';
         const statusEvaluasi = pct === '100%' ? 'Disiplin Tinggi' : (tot > 0 && (row.hadir / tot) >= 0.75 ? 'Cukup Disiplin' : 'Perlu Perhatian');
-        csvRows.push([idx++, row.name, row.role, row.hadir, row.izinKhusus, row.izinPribadi, row.sakit, row.tidakHadir, tot, pct, statusEvaluasi]);
+        csvRows.push([idx++, row.name, row.role, row.hadir, row.izinKhusus, row.izinPribadi, row.sakit, row.tidakHadir, `${row.totalOvertime || 0} Jam`, tot, pct, statusEvaluasi]);
       });
 
       const monthName = MONTH_NAMES[monthlyFilter.month];
@@ -1862,10 +1971,14 @@ function bindMonthlyEvents() {
           izinKhusus: 0,
           izinPribadi: 0,
           sakit: 0,
-          tidakHadir: 0
+          tidakHadir: 0,
+          totalOvertime: 0
         });
       }
       const item = recapMap.get(r.name);
+      if (r.overtime && Number(r.overtime) > 0) {
+        item.totalOvertime += Number(r.overtime);
+      }
       if (r.status === 'Hadir') item.hadir += 1;
       else if (r.status === 'Izin (Khusus)') item.izinKhusus += 1;
       else if (r.status === 'Izin (Pribadi)') item.izinPribadi += 1;
@@ -1929,7 +2042,7 @@ function bindMonthlyEvents() {
     doc.setLineWidth(0.4);
     doc.line(14, 34, 196, 34);
 
-    // Tabel PDF: Nama, Role, Jumlah Hadir, Izin (Khusus), Izin (Pribadi), Sakit, dan Jumlah Tidak Hadir
+    // Tabel PDF: Nama, Role, Jumlah Hadir, Izin (Khusus), Izin (Pribadi), Sakit, Jumlah Tidak Hadir, dan Jam Lembur
     const tableBody = list.map((item, idx) => [
       idx + 1,
       item.name,
@@ -1938,35 +2051,37 @@ function bindMonthlyEvents() {
       `${item.izinKhusus} Hari`,
       `${item.izinPribadi} Hari`,
       `${item.sakit} Hari`,
-      `${item.tidakHadir} Hari`
+      `${item.tidakHadir} Hari`,
+      item.totalOvertime > 0 ? `${item.totalOvertime} Jam` : '0 Jam'
     ]);
 
     autoTable(doc, {
       startY: 38,
-      head: [['No', 'Nama Karyawan', 'Role', 'Jumlah Hadir', 'Izin (Khusus)', 'Izin (Pribadi)', 'Sakit', 'Jumlah Tidak Hadir']],
+      head: [['No', 'Nama Karyawan', 'Role', 'Hadir', 'Izin Khusus', 'Izin Pribadi', 'Sakit', 'Tidak Hadir', 'Lembur']],
       body: tableBody,
       theme: 'grid',
       headStyles: {
         fillColor: [37, 99, 235], // Blue #2563eb
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 8.5,
+        fontSize: 8,
         halign: 'center',
         valign: 'middle'
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },
+        0: { halign: 'center', cellWidth: 9 },
         1: { halign: 'left', fontStyle: 'bold' },
-        2: { halign: 'center', cellWidth: 22 },
-        3: { halign: 'center', cellWidth: 24 },
-        4: { halign: 'center', cellWidth: 24 },
-        5: { halign: 'center', cellWidth: 24 },
-        6: { halign: 'center', cellWidth: 20 },
-        7: { halign: 'center', cellWidth: 28 }
+        2: { halign: 'center', cellWidth: 19 },
+        3: { halign: 'center', cellWidth: 20 },
+        4: { halign: 'center', cellWidth: 22 },
+        5: { halign: 'center', cellWidth: 22 },
+        6: { halign: 'center', cellWidth: 18 },
+        7: { halign: 'center', cellWidth: 22 },
+        8: { halign: 'center', cellWidth: 19 }
       },
       styles: {
-        fontSize: 9,
-        cellPadding: 4,
+        fontSize: 8.5,
+        cellPadding: 3.5,
         textColor: [30, 41, 59],
         lineColor: [226, 232, 240],
         lineWidth: 0.2
@@ -2056,6 +2171,30 @@ function openPhotoLightbox(record) {
 }
 
 /**
+ * Buka Modal Input Jam Lembur
+ */
+function openOvertimeModal(record) {
+  const modal = document.getElementById('modalOvertime');
+  const idInput = document.getElementById('overtimeRecordId');
+  const nameEl = document.getElementById('otEmpName');
+  const metaEl = document.getElementById('otMetaInfo');
+  const hoursInput = document.getElementById('inputOvertimeHours');
+
+  if (idInput) idInput.value = record.id;
+  if (nameEl) nameEl.textContent = `${record.name} (${record.role})`;
+  if (metaEl) {
+    const d = new Date(record.timestamp);
+    metaEl.textContent = `${d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} • Shift: ${record.shiftName || '-'}`;
+  }
+  if (hoursInput) {
+    hoursInput.value = record.overtime !== undefined && record.overtime !== null ? record.overtime : '';
+    setTimeout(() => hoursInput.focus(), 100);
+  }
+
+  modal?.classList.add('open');
+}
+
+/**
  * Toast Notification Helper
  */
 function showToast(message, type = 'success') {
@@ -2086,7 +2225,7 @@ function showToast(message, type = 'success') {
  * Helper Export CSV
  */
 function exportToCsv(records, filename) {
-  const headers = ['No', 'Nama Karyawan', 'Role', 'Shift', 'Status', 'Tanggal Upload', 'Waktu Upload', 'Keterangan'];
+  const headers = ['No', 'Nama Karyawan', 'Role', 'Shift', 'Status', 'Tanggal Upload', 'Waktu Upload', 'Keterangan', 'Jam Lembur'];
   const rows = [headers];
 
   records.forEach((r, i) => {
@@ -2101,7 +2240,8 @@ function exportToCsv(records, filename) {
       r.status,
       dateStr,
       timeStr,
-      r.reason || ''
+      r.reason || '',
+      r.overtime ? `${r.overtime} Jam` : '0 Jam'
     ]);
   });
 

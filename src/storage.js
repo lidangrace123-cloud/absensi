@@ -77,6 +77,19 @@ export function deleteAttendanceRecord(id) {
 }
 
 /**
+ * Update jumlah jam lembur pada satu rekaman absensi
+ */
+export function updateAttendanceOvertime(id, overtimeHours) {
+  const records = getAllRecords();
+  const index = records.findIndex(r => r.id === id);
+  if (index !== -1) {
+    records[index].overtime = Math.max(0, parseFloat(overtimeHours) || 0);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
+  return records;
+}
+
+/**
  * Kosongkan semua data absensi
  */
 export function clearAllRecords() {
