@@ -1130,6 +1130,10 @@ function renderMonthlyPage(container) {
           <span class="box-count">(${recapList.length} Karyawan)</span>
         </div>
         <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline btn-sm" id="btnExportMonthlyCsv" title="Export Rekapitulasi ke format CSV">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Export CSV
+          </button>
           <button class="btn btn-primary btn-sm" id="btnExportMonthlyPdf" title="Download Laporan Rekapitulasi PDF">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
             Download PDF
@@ -1747,8 +1751,6 @@ function bindMonthlyEvents() {
   const yearSelect = document.getElementById('monthlyYearSelect');
   const searchInput = document.getElementById('monthlySearchInput');
   const roleSelect = document.getElementById('monthlyRoleSelect');
-  const btnPrintRecap = document.getElementById('btnPrintRecap');
-  const btnExportMonthlyCsv = document.getElementById('btnExportMonthlyCsv');
 
   monthSelect?.addEventListener('change', e => {
     monthlyFilter.month = parseInt(e.target.value, 10);
@@ -1771,6 +1773,77 @@ function bindMonthlyEvents() {
   });
 
   const btnExportMonthlyPdf = document.getElementById('btnExportMonthlyPdf');
+  const btnExportMonthlyCsv = document.getElementById('btnExportMonthlyCsv');
+
+  btnExportMonthlyCsv?.addEventListener('click', () => {
+    try {
+      const monthlyRecords = currentRecords.filter(item => {
+        const d = new Date(item.timestamp);
+        return d.getMonth() === monthlyFilter.month && d.getFullYear() === monthlyFilter.year;
+      });
+
+      const recapMap = new Map();
+      monthlyRecords.forEach(r => {
+        if (!recapMap.has(r.name)) {
+          recapMap.set(r.name, {
+            name: r.name,
+            role: r.role,
+            hadir: 0,
+            izinKhusus: 0,
+            izinPribadi: 0,
+            sakit: 0,
+            tidakHadir: 0
+          });
+        }
+        const item = recapMap.get(r.name);
+        if (r.status === 'Hadir') item.hadir += 1;
+        else if (r.status === 'Izin (Khusus)') item.izinKhusus += 1;
+        else if (r.status === 'Izin (Pribadi)') item.izinPribadi += 1;
+        else if (r.status === 'Sakit') item.sakit += 1;
+        else if (r.status === 'Tidak Hadir') item.tidakHadir += 1;
+        else {
+          if (r.status.includes('Khusus')) item.izinKhusus += 1;
+          else if (r.status.includes('Pribadi')) item.izinPribadi += 1;
+          else if (r.status.includes('Izin')) item.izinKhusus += 1;
+          else item.tidakHadir += 1;
+        }
+      });
+
+      let list = Array.from(recapMap.values());
+      if (monthlyFilter.role !== 'all') {
+        list = list.filter(r => r.role === monthlyFilter.role);
+      }
+      if (monthlyFilter.search) {
+        const q = monthlyFilter.search.toLowerCase();
+        list = list.filter(r => r.name.toLowerCase().includes(q) || r.role.toLowerCase().includes(q));
+      }
+
+      if (list.length === 0) {
+        showToast('Tidak ada data rekapitulasi untuk di-export ke CSV.', 'danger');
+        return;
+      }
+
+      const csvRows = [
+        ['No', 'Nama Karyawan', 'Role', 'Jumlah Hadir', 'Izin (Khusus)', 'Izin (Pribadi)', 'Sakit', 'Jumlah Tidak Hadir', 'Total Input Absen', 'Persentase Hadir', 'Status Evaluasi']
+      ];
+
+      let idx = 1;
+      list.forEach(row => {
+        const tot = row.hadir + row.izinKhusus + row.izinPribadi + row.sakit + row.tidakHadir;
+        const pct = tot > 0 ? Math.round((row.hadir / tot) * 100) + '%' : '0%';
+        const statusEvaluasi = pct === '100%' ? 'Disiplin Tinggi' : (tot > 0 && (row.hadir / tot) >= 0.75 ? 'Cukup Disiplin' : 'Perlu Perhatian');
+        csvRows.push([idx++, row.name, row.role, row.hadir, row.izinKhusus, row.izinPribadi, row.sakit, row.tidakHadir, tot, pct, statusEvaluasi]);
+      });
+
+      const monthName = MONTH_NAMES[monthlyFilter.month];
+      const year = monthlyFilter.year;
+      downloadCsvFile(csvRows, `Rekap_Presensi_Balole_Billiard_${monthName}_${year}.csv`);
+      showToast('Data Rekap Bulanan berhasil di-export ke CSV!', 'success');
+    } catch (err) {
+      console.error('Error saat export CSV:', err);
+      showToast('Gagal export CSV: ' + (err.message || 'Terjadi kesalahan sistem'), 'danger');
+    }
+  });
 
   btnExportMonthlyPdf?.addEventListener('click', () => {
     try {
@@ -1913,7 +1986,7 @@ function bindMonthlyEvents() {
       }
     });
 
-      doc.save(`Rekap_Presensi_Balole_${monthName}_${year}.pdf`);
+      doc.save(`Rekap_Presensi_Balole_Billiard_${monthName}_${year}.pdf`);
       showToast('Laporan Rekap PDF berhasil diunduh!', 'success');
     } catch (err) {
       console.error('Error saat membuat PDF:', err);
