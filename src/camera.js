@@ -107,7 +107,7 @@ export function captureSnapshot(videoElement, captureTime = new Date(), employee
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   
-  const textLeft = employeeName ? `${employeeName} • Balole Biliard` : `Balole Biliard Sport & Cafe`;
+  const textLeft = employeeName ? `${employeeName} • Balole Billiard` : `Balole Billiard Sport & Cafe`;
   ctx.fillText(textLeft, 14, height - barHeight / 2 + 1);
 
   ctx.textAlign = 'right';

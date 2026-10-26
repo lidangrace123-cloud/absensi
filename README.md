@@ -1,6 +1,6 @@
-# Grace Coffee & Eatery - Sistem Presensi Karyawan
+# Balole Billiard Sport & Cafe - Sistem Presensi Karyawan
 
-Aplikasi web presensi karyawan sederhana dan modern dengan tampilan **clean dominasi putih**, kamera *streamer* langsung, validasi jam shift, serta fitur rekapitulasi bulanan.
+Aplikasi web presensi karyawan Balole Billiard Sport & Cafe dengan kamera *streamer* langsung, validasi jam shift, serta fitur rekapitulasi bulanan.
 
 ## 🚀 Fitur Utama
 

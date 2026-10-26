@@ -1,6 +1,6 @@
 /**
  * main.js
- * Balole Biliard Sport & Cafe - Sistem Presensi Karyawan
+ * Balole Billiard Sport & Cafe - Sistem Presensi Karyawan
  * Dengan Desain Icon Seragam Minimalis 1 Warna & Logo Resmi
  */
 
@@ -72,15 +72,15 @@ function initAppView() {
 }
 
 /**
- * Render Halaman Login dengan Logo Balole Biliard Sport & Cafe
+ * Render Halaman Login dengan Logo Balole Billiard Sport & Cafe
  */
 function renderLoginPage() {
   appEl.innerHTML = `
     <div class="login-page-wrapper">
       <div class="login-card">
         <div class="login-header">
-          <img src="${logoUrl}" alt="Balole Biliard Sport & Cafe" class="login-logo-img" />
-          <h2>Balole Biliard Sport & Cafe</h2>
+          <img src="${logoUrl}" alt="Balole Billiard Sport & Cafe" class="login-logo-img" />
+          <h2>Balole Billiard Sport & Cafe</h2>
           <p>Sistem Presensi & Absensi Karyawan</p>
         </div>
 
@@ -216,10 +216,10 @@ function renderApp() {
       <div class="nav-inner">
         <div class="brand">
           <div class="brand-icon">
-            <img src="${logoUrl}" alt="Balole Biliard Sport & Cafe" class="brand-logo-img" />
+            <img src="${logoUrl}" alt="Balole Billiard Sport & Cafe" class="brand-logo-img" />
           </div>
           <div class="brand-text">
-            <h1>Balole Biliard Sport & Cafe</h1>
+            <h1>Balole Billiard Sport & Cafe</h1>
             <p>Sistem Presensi Karyawan & Rekapitulasi</p>
           </div>
         </div>
@@ -1712,7 +1712,7 @@ function bindDailyEvents() {
   btnExportDailyCsv?.addEventListener('click', () => {
     exportToCsv(
       currentRecords.filter(r => (!dailyFilter.date || r.timestamp.startsWith(dailyFilter.date))),
-      `Presensi_Balole_Biliard_${dailyFilter.date || 'Semua'}.csv`
+      `Presensi_Balole_Billiard_${dailyFilter.date || 'Semua'}.csv`
     );
   });
 
@@ -1833,7 +1833,7 @@ function bindMonthlyEvents() {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
     doc.setTextColor(15, 23, 42); // #0f172a
-    doc.text('BALOLE BILIARD SPORT & CAFE', 14, 18);
+    doc.text('BALOLE BILLIARD SPORT & CAFE', 14, 18);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10.5);
@@ -1906,7 +1906,7 @@ function bindMonthlyEvents() {
         doc.setFontSize(8);
         doc.setTextColor(148, 163, 184);
         doc.text(
-          `Halaman ${data.pageNumber} dari ${pageCount} • Balole Biliard Sport & Cafe`,
+          `Halaman ${data.pageNumber} dari ${pageCount} • Balole Billiard Sport & Cafe`,
           14,
           doc.internal.pageSize.height - 10
         );
